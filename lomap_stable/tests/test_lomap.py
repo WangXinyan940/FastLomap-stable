@@ -1,9 +1,9 @@
 import pkg_resources
 
-from lomap.mcs import MCS
+from lomap_stable.mcs import MCS
 from rdkit import RDLogger, Chem
-from lomap.dbmol import DBMolecules
-from lomap import dbmol
+from lomap_stable.dbmol import DBMolecules
+from lomap_stable import dbmol
 import multiprocessing
 import math
 import argparse

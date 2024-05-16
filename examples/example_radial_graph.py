@@ -1,5 +1,5 @@
 # Import lomap
-import lomap
+import lomap_stable
 import sys
 import networkx as nx
 
@@ -7,7 +7,7 @@ import networkx as nx
 # The DBMolecule class must be created with a valid
 # directory name
         
-db_mol = lomap.DBMolecules('../test/radial/', output=True, radial=True )
+db_mol = lomap_stable.DBMolecules('../test/radial/', output=True, radial=True )
 #use the radial option with hub ligand set as 
 #db_mol = lomap.DBMolecules('test/radial/', output=True, radial=True, hub="ejm_46.mol2")
     
@@ -33,4 +33,4 @@ nx_graph = db_mol.build_graph()
 # the first two molecules in the molecule database 
 # ignoring hydrogens and depicting the mapping in a file
     
-MC = lomap.MCS.getMapping(db_mol[0].getMolecule(), db_mol[1].getMolecule(), hydrogens=False, fname='mcs.png')
+MC = lomap_stable.MCS.getMapping(db_mol[0].getMolecule(), db_mol[1].getMolecule(), hydrogens=False, fname='mcs.png')

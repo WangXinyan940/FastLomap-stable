@@ -7,7 +7,7 @@ import pkg_resources
 import pytest
 from rdkit import Chem
 
-from lomap import mcs
+from lomap_stable import mcs
 
 
 def _rf(fn):
