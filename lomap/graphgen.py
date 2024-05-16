@@ -48,7 +48,7 @@ import shutil
 import traceback
 import itertools
 
-from utils import find_bridges
+from .utils import find_bridges
 __all__ = ['GraphGen']
 
 
