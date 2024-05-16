@@ -551,8 +551,6 @@ class MCS(object):
             return
 
         # START of __init__ function
-        # Set logging level and format
-        logger.basicConfig(format='%(levelname)s:\t%(message)s', level=logger.INFO)
 
         # Global beta setting for atom penalties
         self.beta = 0.1
