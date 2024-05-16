@@ -952,13 +952,14 @@ class GraphGen(object):
 
     # The function to output the score and connectivity txt file
 
-    def layout_info(self):
+    def layout_info(self, out_file: str = None):
         # pass the lead compound index if the radial option is on and generate the
         # morph type of output required by FESetup
         if self.lead_index is not None:
             morph_txt = open(self.dbase.options['name'] + "_morph.txt", "w")
             morph_data = "morph_pairs = "
-        with open(self.dbase.options['name'] + "_score_with_connection.txt", "w") as info_txt:
+        out_name = out_file if out_file is not None else self.dbase.options['name'] + "_score_with_connection.txt"
+        with open(out_name, "w") as info_txt:
             all_key_id = self.dbase.dic_mapping.keys()
             data = ["%-10s,%-10s,%-25s,%-25s,%-15s,%-15s,%-15s,%-10s\n" % (
             "Index_1", "Index_2", "Filename_1", "Filename_2", "Str_sim", "Eff_sim", "Loose_sim", "Connect")]
