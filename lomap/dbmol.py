@@ -27,6 +27,7 @@ potential ligands within a substantial of compounds.
 import argparse
 import glob
 import logging
+logger = logging.getLogger("lomap.dbmol")
 import math
 import multiprocessing
 import os
@@ -173,14 +174,6 @@ class DBMolecules(object):
             The maximum number of links from any molecule to an active
 
         """
-        # Set the Logging
-        if verbose == 'off':
-            logging.basicConfig(format='%(message)s', level=logging.CRITICAL)
-        elif verbose == 'info':
-            logging.basicConfig(format='%(message)s', level=logging.INFO)
-        elif verbose == 'pedantic':
-            logging.basicConfig(format='%(message)s', level=logging.DEBUG)
-            # logging.basicConfig(format='%(levelname)s:\t%(message)s', level=logging.DEBUG)
 
         if not isinstance(output, bool):
             raise TypeError('The output flag is not a bool type')
@@ -367,7 +360,7 @@ class DBMolecules(object):
         # List of molecule that failed to load in
         mol_error_list_fn = []
 
-        logging.info(30 * '-')
+        logger.info(30 * '-')
 
         # The .mol2 and .sdf file formats are the only supported so far
         mol_fnames = glob.glob(self.options['directory'] + "/*.mol2")
@@ -392,7 +385,7 @@ class DBMolecules(object):
 
             # Reading problems
             if rdkit_mol == None:
-                logging.warning('Error reading the file: %s' % os.path.basename(fname))
+                logger.warning('Error reading the file: %s' % os.path.basename(fname))
                 mol_error_list_fn.append(os.path.basename(fname))
                 continue
 
@@ -402,26 +395,26 @@ class DBMolecules(object):
 
             # Cosmetic printing and status
             if print_cnt < 15 or print_cnt == (len(mol_fnames) - 1):
-                logging.info('ID %s\t%s' % (mol.getID(), os.path.basename(fname)))
+                logger.info('ID %s\t%s' % (mol.getID(), os.path.basename(fname)))
 
             if print_cnt == 15:
-                logging.info('ID %s\t%s' % (mol.getID(), os.path.basename(fname)))
-                logging.info(3 * '\t.\t.\n')
+                logger.info('ID %s\t%s' % (mol.getID(), os.path.basename(fname)))
+                logger.info(3 * '\t.\t.\n')
 
             print_cnt += 1
 
             molid_list.append(mol)
 
-        logging.info(30 * '-')
+        logger.info(30 * '-')
 
-        logging.info('Finish reading input files. %d structures in total....skipped %d\n' % (
+        logger.info('Finish reading input files. %d structures in total....skipped %d\n' % (
         len(molid_list), len(mol_error_list_fn)))
 
         if mol_error_list_fn:
-            logging.warning('Skipped molecules:')
-            logging.warning(30 * '-')
+            logger.warning('Skipped molecules:')
+            logger.warning(30 * '-')
             for fn in mol_error_list_fn:
-                logging.warning('%s' % fn)
+                logger.warning('%s' % fn)
             print(30 * '-')
 
         return molid_list
@@ -456,12 +449,12 @@ class DBMolecules(object):
                     indexa = self.inv_dic_mapping[mols[0]]
                     self.known_actives.append(indexa)
                     self._list[indexa].setActive(True)
-                    logging.info(f"Added known activity for mol {mols[0]} -> {indexa}")
+                    logger.info(f"Added known activity for mol {mols[0]} -> {indexa}")
         except KeyError as e:
             raise IOError('Filename within the actives file "' + actives_file + '" not found: ' + str(e)) from None
         # Add all combinations of these to the set of prespecified links
         for t in [(x,y) for x in self.known_actives for y in self.known_actives]:
-            logging.info(f"Added prespecified link for {t}")
+            logger.info(f"Added prespecified link for {t}")
             self.prespecified_links[t]=-1
 
     def set_MCSmap(self, i, j, MCmap):
@@ -534,7 +527,7 @@ class DBMolecules(object):
             moli = self[i].getMolecule()
             molj = self[j].getMolecule()
 
-            logging.info('Processing molecules: %s-%s' % (self[i].getName(), self[j].getName()))
+            logger.info('Processing molecules: %s-%s' % (self[i].getName(), self[j].getName()))
 
             # The Electrostatic score rule is calculated
             ecr_score = ecr(moli, molj)
@@ -544,19 +537,19 @@ class DBMolecules(object):
             if (i, j) in self.prespecified_links and self.prespecified_links[(i, j)] >= -1:
                 strict_scr = abs(self.prespecified_links[(i, j)])
                 loose_scr = strict_scr
-                logging.info(f'MCS molecules: {self[i].getName()} - {self[i].getName()} '
+                logger.info(f'MCS molecules: {self[i].getName()} - {self[i].getName()} '
                              'final score {strict_scr} set in links file')
             else:
                 # The MCS is computed only if the passed molecules have the same charges
                 if ecr_score or self.options['ecrscore']:
                     if ecr_score == 0.0 and self.options['ecrscore']:
-                        logging.critical('WARNING: Mutation between different charge molecules is enabled')
+                        logger.critical('WARNING: Mutation between different charge molecules is enabled')
                         ecr_score = self.options['ecrscore']
 
                     try:
                         if self.options['verbose'] == 'pedantic':
-                            logging.info(50 * '-')
-                            logging.info(f'MCS molecules: {self[i].getName()} - {self[j].getName()}')
+                            logger.info(50 * '-')
+                            logger.info(f'MCS molecules: {self[i].getName()} - {self[j].getName()}')
 
                         # Maximum Common Subgraph (MCS) calculation
                         MC = mcs.MCS(
@@ -570,10 +563,10 @@ class DBMolecules(object):
                         MCS_map[(i, j)] = ml
 
                     except Exception as e:
-                        logging.warning(
+                        logger.warning(
                             f'Skipping MCS molecules (exception): {self[i].getName()} - {self[j].getName()}\t\n\n'
                             f'{e}')
-                        logging.info(50 * '-')
+                        logger.info(50 * '-')
                         continue
                 else:
                     continue
@@ -608,7 +601,7 @@ class DBMolecules(object):
 
         """
 
-        logging.info('\nMatrix scoring in progress....\n')
+        logger.info('\nMatrix scoring in progress....\n')
 
         # The similarity score matrices are defined instances of the class SMatrix
         # which implements a basic class for symmetric matrices
@@ -625,7 +618,7 @@ class DBMolecules(object):
                 self.set_MCSmap(idx[0], idx[1], MCS_map[idx])
         else:
             # Parallel execution
-            logging.info('Parallel mode is on')
+            logger.info('Parallel mode is on')
 
             # Number of selected processes
             num_proc = self.options['parallel']
@@ -686,7 +679,7 @@ class DBMolecules(object):
         This function coordinates the Graph generation
 
         """
-        logging.info('\nGenerating graph in progress....')
+        logger.info('\nGenerating graph in progress....')
 
         # The Graph is build from an instance of the Class GraphGen by passing
         # the selected user options
@@ -699,7 +692,7 @@ class DBMolecules(object):
                 with open(self.options['name'] + ".pickle", "wb") as pickle_f:
                     pickle.dump(Gr, pickle_f)
             except Exception as e:
-                logging.error(str(e))
+                logger.error(str(e))
 
         # Handle to the the NetworkX generated graph
         self.Graph = Gr.get_graph()
