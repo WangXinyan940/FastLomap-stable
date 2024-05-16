@@ -33,6 +33,7 @@ from rdkit.Geometry.rdGeometry import Point3D
 import math
 from rdkit import RDLogger
 import logging
+logger = logging.getLogger("lomap.mcs")
 
 # *******************************
 # Maximum Common Subgraph Class
@@ -209,7 +210,7 @@ class MCS(object):
                     rwm = Chem.RWMol(self.mcs_mol)
                     rwm.RemoveAtom(worstatomidx)
                     if verbose == 'pedantic':
-                       logging.info('Removing atom %d from MCS based on distance %f' %(worstatomidx,worstdist))
+                       logger.info('Removing atom %d from MCS based on distance %f' %(worstatomidx,worstdist))
                     self.mcs_mol=Chem.Mol(rwm)
                 else:
                     break
@@ -240,14 +241,14 @@ class MCS(object):
                                 if not self.mcs_mol.GetBondBetweenAtoms(aimcs,baimcs):
                                     to_remove.append(aimcs)
                                     if verbose == 'pedantic':
-                                       logging.info('Bond in first mol between atoms %d and %d not matched in MCS' %(ai.GetIdx(),bai.GetIdx()))
+                                       logger.info('Bond in first mol between atoms %d and %d not matched in MCS' %(ai.GetIdx(),bai.GetIdx()))
 
             if to_remove:
                 # Delete atoms from the MCS, highest index first
                 to_remove.sort(reverse=True)
 
                 if verbose == 'pedantic':
-                   logging.info('Removing %d atoms from MCS based on detection of broken RDKit ring bond matching' %(len(to_remove)))
+                   logger.info('Removing %d atoms from MCS based on detection of broken RDKit ring bond matching' %(len(to_remove)))
 
                 edit_mcs_mol = Chem.EditableMol(self.mcs_mol)
                 for i in to_remove:
@@ -338,7 +339,7 @@ class MCS(object):
                     mcsat = self.mcs_mol.GetAtomWithIdx(i)
                     mcsat.SetChiralTag(Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CW)
                     if verbose == 'pedantic':
-                       logging.info('Inverted chiral atom detected: %d' %(i))
+                       logger.info('Inverted chiral atom detected: %d' %(i))
 
 
             # Flag inverted atoms
@@ -399,7 +400,7 @@ class MCS(object):
                     min_frag.sort(reverse=True)
 
                     if verbose == 'pedantic':
-                       logging.info('Removing %d atoms to remove chiral inversion' %(len(min_frag)))
+                       logger.info('Removing %d atoms to remove chiral inversion' %(len(min_frag)))
                     edit_mol = Chem.EditableMol(self.mcs_mol)
                     for idx in min_frag:
                         edit_mol.RemoveAtom(idx)
@@ -434,7 +435,7 @@ class MCS(object):
                 to_remove.sort(reverse=True)
 
                 if verbose == 'pedantic':
-                    logging.info('Removing %d atoms from MCS to clear up partial rings' %(len(to_remove)))
+                    logger.info('Removing %d atoms from MCS to clear up partial rings' %(len(to_remove)))
 
                 edit_mcs_mol = Chem.EditableMol(self.mcs_mol)
                 for i in to_remove:
@@ -551,7 +552,7 @@ class MCS(object):
 
         # START of __init__ function
         # Set logging level and format
-        logging.basicConfig(format='%(levelname)s:\t%(message)s', level=logging.INFO)
+        logger.basicConfig(format='%(levelname)s:\t%(message)s', level=logger.INFO)
 
         # Global beta setting for atom penalties
         self.beta = 0.1
@@ -623,7 +624,7 @@ class MCS(object):
 
         # Checking
         if __mcs.canceled:
-            logging.warning('Timeout reached to find the MCS between the molecules')
+            logger.warning('Timeout reached to find the MCS between the molecules')
 
         if __mcs.numAtoms == 0:
             raise ValueError('No MCS was found between the molecules')
@@ -884,7 +885,7 @@ class MCS(object):
         # score
         scr_mcsr = math.exp(-self.beta * (nha_moli + nha_molj - 2 * nha_mcs_mol))
 
-        logging.info('MCSR from MCS size %d, molecule sizes %d,%d is %f' %(nha_mcs_mol,nha_moli,nha_molj,scr_mcsr))
+        logger.info('MCSR from MCS size %d, molecule sizes %d,%d is %f' %(nha_mcs_mol,nha_moli,nha_molj,scr_mcsr))
 
         return scr_mcsr
 
@@ -983,7 +984,7 @@ class MCS(object):
                 nmismatch+=(1-diff)
 
         an_score =  math.exp(-1 * self.beta * nmismatch)
-        logging.info('atomic number score from %d mismatches is %f' %(nmismatch,an_score))
+        logger.info('atomic number score from %d mismatches is %f' %(nmismatch,an_score))
         return an_score
 
     # Hybridization rule
@@ -1014,10 +1015,10 @@ class MCS(object):
 
             if mismatch:
                 nmismatch+=1
-                logging.info("Hybridization mismatch %d %s %d vs %d %s %d",moli_a.GetIdx(),moli_a.GetSymbol(),hybi,molj_a.GetIdx(),molj_a.GetSymbol(),hybj)
+                logger.info("Hybridization mismatch %d %s %d vs %d %s %d",moli_a.GetIdx(),moli_a.GetSymbol(),hybi,molj_a.GetIdx(),molj_a.GetSymbol(),hybj)
 
         hyb_score =  math.exp(-1 * self.beta * nmismatch * penalty_weight)
-        logging.info('hybridization score from %d mismatches is %f' %(nmismatch,hyb_score))
+        logger.info('hybridization score from %d mismatches is %f' %(nmismatch,hyb_score))
         return hyb_score
 
 
@@ -1052,7 +1053,7 @@ class MCS(object):
         fail = 1 if (adds_sulfonamide(self._moli_noh)) else 0
         fail = 1 if (adds_sulfonamide(self._molj_noh)) else fail
         sulf_score =  math.exp(-1 * self.beta * fail * penalty)
-        logging.info('sulfonamide score is %f' %(sulf_score))
+        logger.info('sulfonamide score is %f' %(sulf_score))
         return sulf_score
 
     # Heterocycles rule
@@ -1094,7 +1095,7 @@ class MCS(object):
         fail = 1 if (adds_heterocycle(self._moli_noh)) else 0
         fail = 1 if (adds_heterocycle(self._molj_noh)) else fail
         het_score = math.exp(-1 * self.beta * fail * penalty)
-        logging.info('heterocycle score is %f' %(het_score))
+        logger.info('heterocycle score is %f' %(het_score))
         return het_score
 
     def transmuting_methyl_into_ring_rule(self, penalty=6):
@@ -1131,7 +1132,7 @@ class MCS(object):
                 break
 
         mescore = math.exp(-1 * self.beta * penalty) if is_bad else 1
-        logging.info('methyl-to-ring transformation score is %f' %(mescore))
+        logger.info('methyl-to-ring transformation score is %f' %(mescore))
         return mescore
 
     def transmuting_ring_sizes_rule(self):
@@ -1162,7 +1163,7 @@ class MCS(object):
                 if (moli.GetAtomWithIdx(edgeAtom_i).IsInRing() and molj.GetAtomWithIdx(edgeAtom_j).IsInRing()):
                     for ring_size in range(3,8):
                         if (moli.GetAtomWithIdx(edgeAtom_i).IsInRingSize(ring_size) ^ molj.GetAtomWithIdx(edgeAtom_j).IsInRingSize(ring_size)):
-                            logging.info('tRansforming ring sizes score is 0 based on atom %d in moli and %d in molj' %(edgeAtom_i,edgeAtom_j))
+                            logger.info('tRansforming ring sizes score is 0 based on atom %d in moli and %d in molj' %(edgeAtom_i,edgeAtom_j))
                             is_bad=True
                             break
                         if (moli.GetAtomWithIdx(edgeAtom_i).IsInRingSize(ring_size) or molj.GetAtomWithIdx(edgeAtom_j).IsInRingSize(ring_size)):

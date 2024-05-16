@@ -43,6 +43,7 @@ from rdkit.Chem import Draw
 from rdkit.Chem import AllChem
 import os.path
 import logging
+logger = logging.getLogger("lomap.graphgen")
 import tempfile
 import shutil
 import traceback
@@ -188,7 +189,7 @@ class GraphGen(object):
                 if os.path.basename(self.dbase[i].getName()) == self.dbase.options['hub']:
                     hub_index = i
             if hub_index is None:
-                logging.info(f"Warning: the specified center ligand {self.dbase.options['hub']} is not in the "
+                logger.info(f"Warning: the specified center ligand {self.dbase.options['hub']} is not in the "
                              "ligand database, will not use the radial option.")
             return hub_index
         else:
@@ -354,11 +355,11 @@ class GraphGen(object):
                 return False
             else:
                 # Re-split when there are multiple chunks
-                logging.info('Split: #E={}, {} {}'.format(len(subgraph.edges()), idx, idx + chunk_size))
+                logger.info('Split: #E={}, {} {}'.format(len(subgraph.edges()), idx, idx + chunk_size))
                 # Run chunk_process recursively with smaller chunks
                 chunk_size = max(chunk_size // self.chunk_scale, 1)
                 for i in range(0, len(edge_chunk), chunk_size):
-                    logging.info('Process: #E={}, {} {}'.format(len(subgraph.edges()), idx + i, idx + i + chunk_size))
+                    logger.info('Process: #E={}, {} {}'.format(len(subgraph.edges()), idx + i, idx + i + chunk_size))
                     ret = chunk_process(edge_chunk[i:i + chunk_size], data_chunk[i:i + chunk_size], chunk_size, idx + i)
                     # If unremovable edges are found, try to check the rest of the chunk
                     if not ret:
@@ -371,7 +372,7 @@ class GraphGen(object):
             similarities = [d['similarity'] < 1.0 for d in data_chunk]
             if not all(similarities):
                 if not any(similarities):
-                    logging.info('Skip (similarity=1.0): {}'.format(len(edge_chunk)))
+                    logger.info('Skip (similarity=1.0): {}'.format(len(edge_chunk)))
                     return True
                 # Restore edges because they contain edges that cannot be removed
                 return False
@@ -379,7 +380,7 @@ class GraphGen(object):
                 # Remove edges in the chunk and check constraints
                 subgraph.remove_edges_from(edge_chunk)
                 if self.check_constraints(subgraph, numberOfComponents):
-                    logging.info('Removed: {}'.format(len(edge_chunk)))
+                    logger.info('Removed: {}'.format(len(edge_chunk)))
                     return True
                 # Restore edges because constraints are not satisfied
                 for (i, j), d in zip(edge_chunk, data_chunk):
@@ -410,14 +411,14 @@ class GraphGen(object):
                             if self.check_constraints(subgraph, numberOfComponents) == False:
                                 subgraph.add_edge(edge[0], edge[1], similarity=edge[2], strict_flag=True)
                     elif edge[2] < 1.0:  # Don't remove edges with similarity 1
-                        logging.info("Trying to remove edge %d-%d with similarity %f" % (edge[0],edge[1],edge[2]))
+                        logger.info("Trying to remove edge %d-%d with similarity %f" % (edge[0],edge[1],edge[2]))
                         subgraph.remove_edge(edge[0], edge[1])
                         if self.check_constraints(subgraph, numberOfComponents) == False:
                             subgraph.add_edge(edge[0], edge[1], similarity=edge[2], strict_flag=True)
                         else:
-                            logging.info("Removed edge %d-%d" % (edge[0],edge[1]))
+                            logger.info("Removed edge %d-%d" % (edge[0],edge[1]))
                     else:
-                        logging.info("Skipping edge %d-%d as it has similarity 1" % (edge[0],edge[1]))
+                        logger.info("Skipping edge %d-%d as it has similarity 1" % (edge[0],edge[1]))
             elif len(subgraph.edges()) > 2:
                 # radial option is not supported in fast mode
                 N = len(subgraph)
@@ -434,10 +435,10 @@ class GraphGen(object):
                     edge_chunk = edges[idx_i:idx_j]
                     data_chunk = data[idx_i:idx_j]
                     if len(edge_chunk) >1:
-                        logging.info('Process: #E={}, {} {}'.format(len(subgraph.edges()), idx_i, idx_j))
+                        logger.info('Process: #E={}, {} {}'.format(len(subgraph.edges()), idx_i, idx_j))
                         chunk_process(edge_chunk, data_chunk, chunk_size_l, idx_i)
                     else:
-                        logging.info('Process: #E={}, {} {}'.format(len(subgraph.edges()), idx_i, idx_j))
+                        logger.info('Process: #E={}, {} {}'.format(len(subgraph.edges()), idx_i, idx_j))
                         check_chunk(edge_chunk, data_chunk)
 
     def add_surrounding_edges(self):
@@ -572,7 +573,7 @@ class GraphGen(object):
         if numComponents == nx.number_connected_components(subgraph):
             isConnected = True
         else:
-            logging.info("Rejecting edge deletion on graph connectivity")
+            logger.info("Rejecting edge deletion on graph connectivity")
 
         return isConnected
 
@@ -601,12 +602,12 @@ class GraphGen(object):
             # Optionally determine cycle constraints from non-cyclic nodes
             if self.find_non_cyclic_nodes(subgraph).difference(self.nonCycleNodesSet):
                 hasCovering = False
-                logging.info("Rejecting edge deletion on cycle covering (nodes)")
+                logger.info("Rejecting edge deletion on cycle covering (nodes)")
         else:
             # Have we increased the number of non-cyclic edges?
             if self.find_non_cyclic_edges(subgraph).difference(self.nonCycleEdgesSet):
                 hasCovering = False
-                logging.info("Rejecting edge deletion on cycle covering")
+                logger.info("Rejecting edge deletion on cycle covering")
 
         return hasCovering
 
@@ -631,7 +632,7 @@ class GraphGen(object):
         # usebounds option is a diameter calculation linear in the number of nodes in most cases
         if nx.diameter(subgraph, usebounds = True) > self.maxPathLength:
             withinMaxDistance = False
-            logging.info("Rejecting edge deletion on graph diameter")
+            logger.info("Rejecting edge deletion on graph diameter")
 
         return withinMaxDistance
 
@@ -690,8 +691,8 @@ class GraphGen(object):
 
         count = self.count_distance_to_active_failures(subgraph)
         failed =  (count > self.distanceToActiveFailures)
-        if (failed): logging.info("Rejecting edge deletion on distance-to-actives %d vs %d" % (count,self.distanceToActiveFailures))
-        logging.info("Checking edge deletion on distance-to-actives %d vs %d" % (count,self.distanceToActiveFailures))
+        if (failed): logger.info("Rejecting edge deletion on distance-to-actives %d vs %d" % (count,self.distanceToActiveFailures))
+        logger.info("Checking edge deletion on distance-to-actives %d vs %d" % (count,self.distanceToActiveFailures))
         return not failed
 
 
@@ -913,7 +914,7 @@ class GraphGen(object):
                     except:
                         ###### need to ask RDKit to fix this if possible, see the code
                         # issue tracker for more details######
-                        logging.info(
+                        logger.info(
                             "Error attempting to remove hydrogens for molecule %s using RDKit. RDKit cannot kekulize the molecule" %
                             self.dbase[id_mol].getName())
                     AllChem.Compute2DCoords(mol)
@@ -1038,7 +1039,7 @@ class GraphGen(object):
             traceback.print_exc()
             raise IOError('Problems during the file generation: %s' % str(e))
 
-        logging.info(30 * '-')
+        logger.info(30 * '-')
 
         log = 'The following files have been generated:'
         if not output_no_graph:
@@ -1046,9 +1047,9 @@ class GraphGen(object):
         if not output_no_images:
             log += f'\n{self.dbase.options["name"]}.png\tPng file'
         log += f'\n{self.dbase.options["name"]}.txt\tMapping Text file'
-        logging.info(log)
+        logger.info(log)
 
-        logging.info(30 * '-')
+        logger.info(30 * '-')
 
         return
 
@@ -1060,10 +1061,10 @@ class GraphGen(object):
 
         """
 
-        logging.info('\nDrawing....')
+        logger.info('\nDrawing....')
 
         if nx.number_of_nodes(self.resultGraph) > self.max_nodes:
-            logging.info('The number of generated graph nodes %d exceed the max number of drawable nodes %s' % (
+            logger.info('The number of generated graph nodes %d exceed the max number of drawable nodes %s' % (
             nx.number_of_nodes(self.resultGraph), self.max_nodes))
             return
 
@@ -1172,7 +1173,7 @@ class GraphGen(object):
                     ###### need to ask RDKit to fix this if possible, see the code
                     # issue tracker for more details######
                     mol = self.dbase[id_mol].getMolecule()
-                    logging.info(
+                    logger.info(
                         "Error attempting to remove hydrogens for molecule %s using RDKit. RDKit cannot kekulize the molecule" %
                         self.dbase[id_mol].getName())
 
@@ -1186,7 +1187,7 @@ class GraphGen(object):
                     img_mol = Draw.MolToImage(mol, mol_size, kekulize=False)
                 except Exception as ex:
                     img_mol = None
-                    logging.exception(
+                    logger.exception(
                         "This mol cannot be draw using the RDKit Draw function, need to check for more details...")
 
                 xx, yy = trans(pos[each_node])

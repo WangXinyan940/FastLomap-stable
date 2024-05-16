@@ -74,17 +74,9 @@ class Figureprint(object):
             the list of user options
 
         """
-
-        # Set logging level and format
-        logging.basicConfig(format='%(levelname)s:\t%(message)s', level=logging.INFO)
-
         # Local pointers to the passed molecules
         self.moli = moli
         self.molj = molj
-
-        if not options.verbose == 'pedantic':
-            lg = RDLogger.logger()
-            lg.setLevel(RDLogger.CRITICAL)
 
         self.fps_moli = FingerprintMols.FingerprintMol(self.moli)
         self.fps_molj = FingerprintMols.FingerprintMol(self.molj)
