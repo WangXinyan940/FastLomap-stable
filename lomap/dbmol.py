@@ -33,7 +33,8 @@ import multiprocessing
 import os
 import pickle
 from ._version import get_versions
-from typing import Optional
+from typing import Optional, Union
+from pathlib import Path
 
 import networkx as nx
 import numpy as np
@@ -95,7 +96,7 @@ class DBMolecules(object):
 
     # Initialization function
     def __init__(self,
-                 directory: str,
+                 molecules: list[Union[str,Path]],
                  parallel: int = 1,
                  verbose: str = 'off',
                  time: int = 20,
@@ -191,8 +192,6 @@ class DBMolecules(object):
             raise TypeError('The node_mode flag is not a bool type')
 
         self.options = dict()
-        CheckDir._check_directory(directory)
-        self.options['directory'] = directory
         CheckPos._check(parallel)
         self.options['parallel'] = parallel
         self.options['verbose'] = verbose
@@ -232,7 +231,7 @@ class DBMolecules(object):
         self.options['node_mode'] = bool(node_mode)
 
         # Internal list container used to store the loaded molecule objects
-        self._list = self.read_molecule_files()
+        self._list = self.read_molecule_files(molecules)
 
         # Dictionary which holds the mapping between the generated molecule IDs and molecule file names
         self.dic_mapping = {}
@@ -342,7 +341,7 @@ class DBMolecules(object):
         """
         return len(self._list)
 
-    def read_molecule_files(self):
+    def read_molecule_files(self, molecules: list[Union[str,Path]]):
         """
         Read in all the mol2 or SDF files
 
@@ -363,13 +362,12 @@ class DBMolecules(object):
         logger.info(30 * '-')
 
         # The .mol2 and .sdf file formats are the only supported so far
-        mol_fnames = glob.glob(self.options['directory'] + "/*.mol2")
-        mol_fnames += glob.glob(self.options['directory'] + "/*.sdf")
+        mol_fnames = [str(i) for i in molecules if str(i).endswith(".mol2") or str(i).endswith(".sdf") or str(i).endwith(".mol")]
 
         mol_fnames.sort()
 
         if len(mol_fnames) < 2:
-            raise IOError(f'The directory {self.options["directory"]} must contain at least two mol2/sdf files')
+            raise IOError('The graph must contain at least two mol2/sdf files')
 
         print_cnt = 0
         mol_id_cnt = 0
@@ -390,15 +388,15 @@ class DBMolecules(object):
                 continue
 
             # The Rdkit molecule is stored in a Molecule object
-            mol = Molecule(rdkit_mol, mol_id_cnt, os.path.basename(fname))
+            mol = Molecule(rdkit_mol, mol_id_cnt, fname)
             mol_id_cnt += 1
 
             # Cosmetic printing and status
             if print_cnt < 15 or print_cnt == (len(mol_fnames) - 1):
-                logger.info('ID %s\t%s' % (mol.getID(), os.path.basename(fname)))
+                logger.info('ID %s\t%s' % (mol.getID(), fname))
 
             if print_cnt == 15:
-                logger.info('ID %s\t%s' % (mol.getID(), os.path.basename(fname)))
+                logger.info('ID %s\t%s' % (mol.getID(), fname))
                 logger.info(3 * '\t.\t.\n')
 
             print_cnt += 1
